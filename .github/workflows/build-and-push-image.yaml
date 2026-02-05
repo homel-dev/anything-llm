@@ -8,6 +8,10 @@ concurrency:
 on:
   release:
     types: [published]
+  workflow_dispatch: {}
+  push:
+    branches: ["main"]
+    tags: ["v*.*.*"]
 
 jobs:
   push_multi_platform_to_ghcr:
