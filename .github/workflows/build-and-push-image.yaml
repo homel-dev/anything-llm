@@ -1,4 +1,4 @@
-# .github/workflows/build-and-push-image-semver.yaml
+# .github/workflows/build-and-push-image.yaml
 name: Publish AnythingLLM Docker image on Release (amd64 & arm64) [GHCR only]
 
 concurrency:
