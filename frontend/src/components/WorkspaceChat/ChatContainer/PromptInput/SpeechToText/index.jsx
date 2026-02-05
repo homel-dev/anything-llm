@@ -1,4 +1,5 @@
-import { useEffect, useCallback, useRef } from "react";
+// frontend/src/components/WorkspaceChat/ChatContainer/PromptInput/SpeechToText/index.jsx
+import { useEffect, useCallback, useRef, useState } from "react";
 import { Microphone } from "@phosphor-icons/react";
 import { Tooltip } from "react-tooltip";
 import "regenerator-runtime"; //required polyfill for speech recognition;
@@ -8,6 +9,8 @@ import SpeechRecognition, {
 import { PROMPT_INPUT_EVENT } from "../../PromptInput";
 import { useTranslation } from "react-i18next";
 import Appearance from "@/models/appearance";
+import System from "@/models/system";
+import LISTSpeechToText from "@/components/SpeechToText/LISTProvider";
 
 let timeout;
 const SILENCE_INTERVAL = 3_200; // wait in seconds of silence before closing.
@@ -19,6 +22,40 @@ const SILENCE_INTERVAL = 3_200; // wait in seconds of silence before closing.
  * @returns {React.ReactElement} The SpeechToText component
  */
 export default function SpeechToText({ sendCommand }) {
+  const [provider, setProvider] = useState("native");
+  const [listEndpoint, setListEndpoint] = useState(
+    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_LIST_API_URL : "") ||
+      ""
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const s = await System.keys();
+        if (!mounted) return;
+        setProvider(s?.SpeechToTextProvider || "native");
+        setListEndpoint(
+          s?.SpeechToTextLISTEndpoint ||
+            (typeof import.meta !== "undefined"
+              ? import.meta.env?.VITE_LIST_API_URL
+              : "") ||
+            ""
+        );
+      } catch (_) {
+        // keep defaults
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // LIST provider: explicit start/stop, single request, no streaming, no silence auto-stop, no auto-submit
+  if (provider === "list") {
+    return <LISTSpeechToText sendCommand={sendCommand} endpoint={listEndpoint} />;
+  }
+
   const previousTranscriptRef = useRef("");
   const {
     transcript,
@@ -31,6 +68,7 @@ export default function SpeechToText({ sendCommand }) {
     clearTranscriptOnListen: true,
   });
   const { t } = useTranslation();
+
   function startSTTSession() {
     if (!isMicrophoneAvailable) {
       alert(
@@ -76,7 +114,7 @@ export default function SpeechToText({ sendCommand }) {
         }
       }
     },
-    [listening, endSTTSession, startSTTSession]
+    [listening]
   );
 
   function handlePromptUpdate(e) {
@@ -145,3 +183,4 @@ export default function SpeechToText({ sendCommand }) {
     </div>
   );
 }
+

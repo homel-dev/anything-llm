@@ -1,3 +1,4 @@
+// frontend/src/pages/GeneralSettings/AudioPreference/stt.jsx
 import React, { useEffect, useState, useRef } from "react";
 import System from "@/models/system";
 import showToast from "@/utils/toast";
@@ -6,6 +7,8 @@ import { CaretUpDown, MagnifyingGlass, X } from "@phosphor-icons/react";
 import CTAButton from "@/components/lib/CTAButton";
 import AnythingLLMIcon from "@/media/logo/anything-llm-icon.png";
 import BrowserNative from "@/components/SpeechToText/BrowserNative";
+import LISTOptions from "@/components/SpeechToText/LISTProvider/Options";
+import ListIcon from "@/media/logo/anything-llm-icon.png";
 
 const PROVIDERS = [
   {
@@ -14,6 +17,14 @@ const PROVIDERS = [
     logo: AnythingLLMIcon,
     options: (settings) => <BrowserNative settings={settings} />,
     description: "Uses your browser's built in STT service if supported.",
+  },
+  {
+    name: "LIST (self-hosted)",
+    value: "list",
+    logo: ListIcon,
+    options: (settings) => <LISTOptions settings={settings} />,
+    description:
+      "Uses your LIST transcription service (explicit start/stop, no streaming).",
   },
 ];
 
@@ -86,8 +97,8 @@ export default function SpeechToTextProvider({ settings }) {
           <p className="text-xs leading-[18px] font-base text-white text-opacity-60">
             Here you can specify what kind of text-to-speech and speech-to-text
             providers you would want to use in your AnythingLLM experience. By
-            default, we use the browser's built in support for these services,
-            but you may want to use others.
+            default, we use the browser&apos;s built in support for these
+            services, but you may want to use others.
           </p>
         </div>
         <div className="w-full justify-end flex">
@@ -189,3 +200,4 @@ export default function SpeechToTextProvider({ settings }) {
     </form>
   );
 }
+
