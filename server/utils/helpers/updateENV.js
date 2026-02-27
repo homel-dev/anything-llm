@@ -613,6 +613,16 @@ const KEY_MAPPING = {
     checks: [supportedTTSProvider],
   },
 
+  SpeechToTextLISTEndpoint: {
+    envKey: "LIST_STT_URL", 
+    checks: [isValidURL],
+  },
+  // If your frontend also sends a provider key, whitelist it too:
+  SpeechToTextProvider: {
+    envKey: "STT_PROVIDER",
+    checks: [isNotEmpty],
+  },
+  
   // TTS OpenAI
   TTSOpenAIKey: {
     envKey: "TTS_OPEN_AI_KEY",
