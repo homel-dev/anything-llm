@@ -271,7 +271,7 @@ const SystemSettings = {
       // --------------------------------------------------------
       // Speech-to-Text (STT) Settings
       SpeechToTextProvider: process.env.STT_PROVIDER || "native",
-      ListSttUrl: process.env.LIST_STT_URL || "",
+      SpeechToTextLISTEndpoint: process.env.LIST_STT_URL || "",
       TextToSpeechProvider: process.env.TTS_PROVIDER || "native",
       TTSOpenAIKey: !!process.env.TTS_OPEN_AI_KEY,
       TTSOpenAIVoiceModel: process.env.TTS_OPEN_AI_VOICE_MODEL,
