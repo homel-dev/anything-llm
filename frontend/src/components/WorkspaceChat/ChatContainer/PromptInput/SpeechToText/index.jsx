@@ -18,16 +18,16 @@ const SILENCE_INTERVAL = 3_200; // wait in seconds of silence before closing.
 /**
  * Speech-to-text input component for the chat window.
  * @param {Object} props - The component props
- * @param {(textToAppend: string, autoSubmit: boolean) => void} props.sendCommand - The function to send the command
+ * @param {(textToAppend: string | object, autoSubmit?: boolean) => void} props.sendCommand - The function to send the command
  * @returns {React.ReactElement} The SpeechToText component
  */
 export default function SpeechToText({ sendCommand }) {
   const [provider, setProvider] = useState("native");
   const [listEndpoint, setListEndpoint] = useState(
-    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_LIST_API_URL : "") ||
-      ""
+    (typeof import.meta !== "undefined" ? import.meta.env?.VITE_LIST_API_URL : "") || ""
   );
 
+  // 1. Fetch settings on mount
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -37,9 +37,7 @@ export default function SpeechToText({ sendCommand }) {
         setProvider(s?.SpeechToTextProvider || "native");
         setListEndpoint(
           s?.SpeechToTextLISTEndpoint ||
-            (typeof import.meta !== "undefined"
-              ? import.meta.env?.VITE_LIST_API_URL
-              : "") ||
+            (typeof import.meta !== "undefined" ? import.meta.env?.VITE_LIST_API_URL : "") ||
             ""
         );
       } catch (_) {
@@ -51,11 +49,7 @@ export default function SpeechToText({ sendCommand }) {
     };
   }, []);
 
-  // LIST provider: explicit start/stop, single request, no streaming, no silence auto-stop, no auto-submit
-  if (provider === "list") {
-    return <LISTSpeechToText sendCommand={sendCommand} endpoint={listEndpoint} />;
-  }
-
+  // 2. Declare ALL hooks unconditionally (Fixes React Error #300)
   const previousTranscriptRef = useRef("");
   const {
     transcript,
@@ -88,8 +82,6 @@ export default function SpeechToText({ sendCommand }) {
   function endSTTSession() {
     SpeechRecognition.stopListening();
 
-    // If auto submit is enabled, send an empty string to the chat window to submit the current transcript
-    // since every chunk of text should have been streamed to the chat window by now.
     if (Appearance.get("autoSubmitSttInput")) {
       sendCommand({
         text: "",
@@ -105,7 +97,9 @@ export default function SpeechToText({ sendCommand }) {
 
   const handleKeyPress = useCallback(
     (event) => {
-      // CTRL + m on Mac and Windows to toggle STT listening
+      // Do not intercept Ctrl+M for native STT if the user is using LIST
+      if (provider === "list") return;
+
       if (event.ctrlKey && event.keyCode === 77) {
         if (listening) {
           endSTTSession();
@@ -114,7 +108,7 @@ export default function SpeechToText({ sendCommand }) {
         }
       }
     },
-    [listening]
+    [listening, provider]
   );
 
   function handlePromptUpdate(e) {
@@ -132,21 +126,20 @@ export default function SpeechToText({ sendCommand }) {
   }, [handleKeyPress]);
 
   useEffect(() => {
-    if (!!window)
-      window.addEventListener(PROMPT_INPUT_EVENT, handlePromptUpdate);
-    return () =>
-      window?.removeEventListener(PROMPT_INPUT_EVENT, handlePromptUpdate);
+    if (!!window) window.addEventListener(PROMPT_INPUT_EVENT, handlePromptUpdate);
+    return () => window?.removeEventListener(PROMPT_INPUT_EVENT, handlePromptUpdate);
   }, []);
 
   useEffect(() => {
+    if (provider === "list") return; // Prevent native timeout processing if on LIST
+
     if (transcript?.length > 0 && listening) {
       const previousTranscript = previousTranscriptRef.current;
       const newContent = transcript.slice(previousTranscript.length);
 
-      // Stream just the diff of the new content since transcript is an accumulating string.
-      // and not just the new content transcribed.
-      if (newContent.length > 0)
+      if (newContent.length > 0) {
         sendCommand({ text: newContent, writeMode: "append" });
+      }
 
       previousTranscriptRef.current = transcript;
       clearTimeout(timeout);
@@ -154,9 +147,20 @@ export default function SpeechToText({ sendCommand }) {
         endSTTSession();
       }, SILENCE_INTERVAL);
     }
-  }, [transcript, listening]);
+  }, [transcript, listening, provider]);
 
+  // ----------------------------------------------------------------------
+  // 3. Conditional Rendering (Must happen AFTER all hooks)
+  // ----------------------------------------------------------------------
+
+  // LIST provider: explicit start/stop, single request, no streaming
+  if (provider === "list") {
+    return <LISTSpeechToText sendCommand={sendCommand} endpoint={listEndpoint} />;
+  }
+
+  // Native provider renders below
   if (!browserSupportsSpeechRecognition) return null;
+
   return (
     <div
       data-tooltip-id="tooltip-microphone-btn"
